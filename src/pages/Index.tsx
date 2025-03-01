@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Industry, Currency } from '../utils/benchmarkData';
 import { UserMetrics, calculateComparison, ComparisonResult } from '../utils/calculatorUtils';
@@ -65,7 +64,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-center text-center">
             <div className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium mb-3">
-              Klaviyo 2023 Benchmarks
+              Klaviyo 2025 Benchmarks
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
               Email Marketing Assessment Calculator
@@ -144,7 +143,7 @@ const Index = () => {
       <footer className="border-t py-8 bg-muted/40">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <p className="text-sm">
-            Based on Klaviyo's 2023 industry standard benchmarks. 
+            Based on Klaviyo's 2025 industry standard benchmarks. 
             This calculator helps email marketers assess their campaign performance.
           </p>
         </div>

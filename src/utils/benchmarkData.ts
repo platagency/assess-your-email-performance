@@ -16,40 +16,40 @@ export interface BenchmarkMetrics {
 
 export const benchmarkData: Record<Industry, BenchmarkMetrics> = {
   'All ecommerce': {
-    openRate: 0.189,        // 18.9%
-    clickRate: 0.0132,      // 1.32%
-    placedOrderRate: 0.0032, // 0.32%
-    revPerRecipient: 0.11   // $0.11
-  },
-  'Apparel and accessories': {
-    openRate: 0.176,        // 17.6%
-    clickRate: 0.0115,      // 1.15%
-    placedOrderRate: 0.0034, // 0.34%
-    revPerRecipient: 0.11   // $0.11
-  },
-  'Food and beverage': {
-    openRate: 0.188,        // 18.8%
-    clickRate: 0.0111,      // 1.11%
-    placedOrderRate: 0.0030, // 0.30%
+    openRate: 0.3793,        // 37.93%
+    clickRate: 0.0129,      // 1.29%
+    placedOrderRate: 0.0008, // 0.08%
     revPerRecipient: 0.10   // $0.10
   },
+  'Apparel and accessories': {
+    openRate: 0.3804,        // 38.04%
+    clickRate: 0.0145,      // 1.45%
+    placedOrderRate: 0.0007, // 0.07%
+    revPerRecipient: 0.09   // $0.09
+  },
+  'Food and beverage': {
+    openRate: 0.3915,        // 39.15%
+    clickRate: 0.0135,      // 1.35%
+    placedOrderRate: 0.0017, // 0.17%
+    revPerRecipient: 0.16   // $0.16
+  },
   'Health and beauty': {
-    openRate: 0.192,        // 19.2%
-    clickRate: 0.0136,      // 1.36%
-    placedOrderRate: 0.0033, // 0.33%
+    openRate: 0.3590,        // 35.9%
+    clickRate: 0.0091,      // 0.91%
+    placedOrderRate: 0.0011, // 0.11%
     revPerRecipient: 0.10   // $0.10
   },
   'Jewelry': {
-    openRate: 0.168,        // 16.8%
-    clickRate: 0.0110,      // 1.10%
-    placedOrderRate: 0.0030, // 0.30%
-    revPerRecipient: 0.13   // $0.13
+    openRate: 0.3726,        // 37.26%
+    clickRate: 0.0135,      // 1.35%
+    placedOrderRate: 0.0005, // 0.05%
+    revPerRecipient: 0.08   // $0.08
   },
   'Other': {
-    openRate: 0.194,        // 19.4%
-    clickRate: 0.0143,      // 1.43%
-    placedOrderRate: 0.0031, // 0.31%
-    revPerRecipient: 0.11   // $0.11
+    openRate: 0.3793,        // Using All ecommerce as default for Other category
+    clickRate: 0.0129,
+    placedOrderRate: 0.0008,
+    revPerRecipient: 0.10
   }
 };
 
