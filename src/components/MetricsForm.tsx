@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Currency, currencySymbols, exchangeRates } from '../utils/benchmarkData';
 
 interface MetricsFormProps {
   onSubmit: (metrics: UserMetrics) => void;
@@ -21,6 +24,7 @@ const initialMetrics: UserMetrics = {
 const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) => {
   const [metrics, setMetrics] = useState<UserMetrics>(initialMetrics);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [currency, setCurrency] = useState<Currency>('USD');
 
   // Validate inputs as user types
   const validateInput = (name: keyof UserMetrics, value: number): string => {
@@ -28,37 +32,62 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
     if (name !== 'revPerRecipient' && (value < 0 || value > 100)) {
       return 'Value must be between 0 and 100';
     }
-    if (name === 'revPerRecipient' && value < 0) {
-      return 'Value must be positive';
+    if (name === 'revPerRecipient' && (value < 0 || value > 100)) {
+      return 'Value must be between 0 and 100';
     }
     return '';
   };
 
+  // Handle slider changes
+  const handleSliderChange = (name: keyof UserMetrics, value: number[]) => {
+    const numValue = name === 'revPerRecipient' 
+      ? value[0] 
+      : value[0] / 100; // Convert percentage to decimal
+      
+    setMetrics(prev => ({ ...prev, [name]: numValue }));
+    
+    const error = validateInput(name, value[0]);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  // Handle direct input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
-    // If input is percentage, convert to decimal
     let numValue: number;
+    let displayValue: number;
     
     if (name === 'revPerRecipient') {
-      // Allow dollar input as is
+      // Direct dollar value input
       numValue = parseFloat(value);
+      displayValue = numValue;
     } else {
-      // Convert percentage to decimal (e.g., 18.5% → 0.185)
-      numValue = parseFloat(value) / 100;
+      // Convert percentage input to decimal for internal storage
+      displayValue = parseFloat(value);
+      numValue = displayValue / 100;
     }
     
-    const error = validateInput(name as keyof UserMetrics, parseFloat(value));
+    const error = validateInput(name as keyof UserMetrics, displayValue);
+    
+    if (!isNaN(numValue)) {
+      setMetrics(prev => ({ ...prev, [name]: numValue }));
+    }
+    
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  // Handle currency change
+  const handleCurrencyChange = (newCurrency: Currency) => {
+    // Convert the current revenue value to the new currency
+    const valueInUSD = metrics.revPerRecipient / exchangeRates[currency];
+    const valueInNewCurrency = valueInUSD * exchangeRates[newCurrency];
     
     setMetrics(prev => ({ 
       ...prev, 
-      [name]: isNaN(numValue) ? 0 : numValue 
+      revPerRecipient: valueInNewCurrency 
     }));
     
-    setErrors(prev => ({
-      ...prev,
-      [name]: error
-    }));
+    setCurrency(newCurrency);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,30 +98,60 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
       return;
     }
     
-    onSubmit(metrics);
+    // If we're not using USD, convert revenue back to USD for comparison
+    let metricsToSubmit = { ...metrics };
+    if (currency !== 'USD') {
+      const valueInUSD = metrics.revPerRecipient / exchangeRates[currency];
+      metricsToSubmit.revPerRecipient = valueInUSD;
+    }
+    
+    onSubmit(metricsToSubmit);
+  };
+
+  // Get display values for inputs and sliders
+  const getDisplayValue = (metric: keyof UserMetrics): number => {
+    if (metric === 'revPerRecipient') {
+      return metrics[metric];
+    }
+    return metrics[metric] * 100; // Convert decimal to percentage
   };
 
   return (
     <div className="w-full max-w-3xl mx-auto">
       <form onSubmit={handleSubmit} className="animate-fade-in space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
+        <div className="space-y-6">
+          {/* Open Rate */}
+          <div className="space-y-4">
             <Label htmlFor="openRate" className="text-sm font-medium">
-              Open Rate (%)
+              Open Rate: {getDisplayValue('openRate').toFixed(2)}%
             </Label>
-            <div className="relative">
-              <Input
-                id="openRate"
-                name="openRate"
-                type="number"
-                step="0.01"
-                placeholder="18.9"
-                value={metrics.openRate === 0 ? '' : (metrics.openRate * 100).toFixed(2)}
-                onChange={handleInputChange}
-                className={errors.openRate ? "border-destructive" : ""}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <span className="text-muted-foreground">%</span>
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <Slider
+                  id="openRate-slider"
+                  name="openRate"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={[getDisplayValue('openRate')]}
+                  onValueChange={(value) => handleSliderChange('openRate', value)}
+                />
+              </div>
+              <div className="w-24 relative">
+                <Input
+                  id="openRate"
+                  name="openRate"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={getDisplayValue('openRate').toFixed(2)}
+                  onChange={handleInputChange}
+                  className={errors.openRate ? "border-destructive pr-8" : "pr-8"}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-muted-foreground">%</span>
+                </div>
               </div>
             </div>
             {errors.openRate && (
@@ -100,23 +159,38 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
             )}
           </div>
 
-          <div className="space-y-2">
+          {/* Click Rate */}
+          <div className="space-y-4">
             <Label htmlFor="clickRate" className="text-sm font-medium">
-              Click Rate (%)
+              Click Rate: {getDisplayValue('clickRate').toFixed(2)}%
             </Label>
-            <div className="relative">
-              <Input
-                id="clickRate"
-                name="clickRate"
-                type="number"
-                step="0.01"
-                placeholder="1.32"
-                value={metrics.clickRate === 0 ? '' : (metrics.clickRate * 100).toFixed(2)}
-                onChange={handleInputChange}
-                className={errors.clickRate ? "border-destructive" : ""}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <span className="text-muted-foreground">%</span>
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <Slider
+                  id="clickRate-slider"
+                  name="clickRate"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={[getDisplayValue('clickRate')]}
+                  onValueChange={(value) => handleSliderChange('clickRate', value)}
+                />
+              </div>
+              <div className="w-24 relative">
+                <Input
+                  id="clickRate"
+                  name="clickRate"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={getDisplayValue('clickRate').toFixed(2)}
+                  onChange={handleInputChange}
+                  className={errors.clickRate ? "border-destructive pr-8" : "pr-8"}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-muted-foreground">%</span>
+                </div>
               </div>
             </div>
             {errors.clickRate && (
@@ -124,23 +198,38 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
             )}
           </div>
 
-          <div className="space-y-2">
+          {/* Placed Order Rate */}
+          <div className="space-y-4">
             <Label htmlFor="placedOrderRate" className="text-sm font-medium">
-              Placed Order Rate (%)
+              Placed Order Rate: {getDisplayValue('placedOrderRate').toFixed(2)}%
             </Label>
-            <div className="relative">
-              <Input
-                id="placedOrderRate"
-                name="placedOrderRate"
-                type="number"
-                step="0.01"
-                placeholder="0.32"
-                value={metrics.placedOrderRate === 0 ? '' : (metrics.placedOrderRate * 100).toFixed(2)}
-                onChange={handleInputChange}
-                className={errors.placedOrderRate ? "border-destructive" : ""}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <span className="text-muted-foreground">%</span>
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <Slider
+                  id="placedOrderRate-slider"
+                  name="placedOrderRate"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={[getDisplayValue('placedOrderRate')]}
+                  onValueChange={(value) => handleSliderChange('placedOrderRate', value)}
+                />
+              </div>
+              <div className="w-24 relative">
+                <Input
+                  id="placedOrderRate"
+                  name="placedOrderRate"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={getDisplayValue('placedOrderRate').toFixed(2)}
+                  onChange={handleInputChange}
+                  className={errors.placedOrderRate ? "border-destructive pr-8" : "pr-8"}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-muted-foreground">%</span>
+                </div>
               </div>
             </div>
             {errors.placedOrderRate && (
@@ -148,23 +237,54 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="revPerRecipient" className="text-sm font-medium">
-              Revenue Per Recipient ($)
-            </Label>
-            <div className="relative">
-              <Input
-                id="revPerRecipient"
-                name="revPerRecipient"
-                type="number"
-                step="0.01"
-                placeholder="0.11"
-                value={metrics.revPerRecipient === 0 ? '' : metrics.revPerRecipient.toFixed(2)}
-                onChange={handleInputChange}
-                className={errors.revPerRecipient ? "border-destructive" : ""}
-              />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <span className="text-muted-foreground">$</span>
+          {/* Revenue Per Recipient */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="revPerRecipient" className="text-sm font-medium">
+                Revenue Per Recipient: {currencySymbols[currency]}{metrics.revPerRecipient.toFixed(2)}
+              </Label>
+              <div className="w-24">
+                <Select value={currency} onValueChange={(value) => handleCurrencyChange(value as Currency)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="USD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                    <SelectItem value="AUD">AUD (A$)</SelectItem>
+                    <SelectItem value="CAD">CAD (C$)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <Slider
+                  id="revPerRecipient-slider"
+                  name="revPerRecipient"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={[metrics.revPerRecipient]}
+                  onValueChange={(value) => handleSliderChange('revPerRecipient', value)}
+                />
+              </div>
+              <div className="w-24 relative">
+                <Input
+                  id="revPerRecipient"
+                  name="revPerRecipient"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={metrics.revPerRecipient.toFixed(2)}
+                  onChange={handleInputChange}
+                  className={errors.revPerRecipient ? "border-destructive pl-8" : "pl-8"}
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <span className="text-muted-foreground">{currencySymbols[currency]}</span>
+                </div>
               </div>
             </div>
             {errors.revPerRecipient && (

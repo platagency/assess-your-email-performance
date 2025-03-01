@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Industry } from '../utils/benchmarkData';
+import { Industry, Currency } from '../utils/benchmarkData';
 import { UserMetrics, calculateComparison, ComparisonResult } from '../utils/calculatorUtils';
 import IndustrySelector from '../components/IndustrySelector';
 import MetricsForm from '../components/MetricsForm';
@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 
 const Index = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('USD');
   const [step, setStep] = useState<'select-industry' | 'enter-metrics' | 'view-results'>('select-industry');
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([]);
 
@@ -26,7 +27,7 @@ const Index = () => {
   const handleMetricsSubmit = (metrics: UserMetrics) => {
     if (!selectedIndustry) return;
     
-    const results = calculateComparison(selectedIndustry, metrics);
+    const results = calculateComparison(selectedIndustry, metrics, selectedCurrency);
     setComparisonResults(results);
     setStep('view-results');
     

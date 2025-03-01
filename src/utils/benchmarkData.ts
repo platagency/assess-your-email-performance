@@ -52,3 +52,25 @@ export const benchmarkData: Record<Industry, BenchmarkMetrics> = {
     revPerRecipient: 0.11   // $0.11
   }
 };
+
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD' | 'CAD';
+
+export const currencySymbols: Record<Currency, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  AUD: 'A$',
+  CAD: 'C$'
+};
+
+export const exchangeRates: Record<Currency, number> = {
+  USD: 1.0,      // Base currency
+  EUR: 0.91,     // 1 USD = 0.91 EUR
+  GBP: 0.78,     // 1 USD = 0.78 GBP
+  AUD: 1.48,     // 1 USD = 1.48 AUD
+  CAD: 1.35      // 1 USD = 1.35 CAD
+};
+
+export const convertCurrency = (valueInUSD: number, targetCurrency: Currency): number => {
+  return valueInUSD * exchangeRates[targetCurrency];
+};

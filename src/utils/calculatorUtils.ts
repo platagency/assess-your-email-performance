@@ -1,5 +1,5 @@
 
-import { BenchmarkMetrics, Industry, benchmarkData } from './benchmarkData';
+import { BenchmarkMetrics, Industry, benchmarkData, Currency, exchangeRates } from './benchmarkData';
 
 export interface UserMetrics {
   openRate: number;
@@ -18,9 +18,15 @@ export interface ComparisonResult {
 
 export function calculateComparison(
   industry: Industry,
-  userMetrics: UserMetrics
+  userMetrics: UserMetrics,
+  currency: Currency = 'USD'
 ): ComparisonResult[] {
   const industryBenchmarks = benchmarkData[industry];
+  
+  // If not USD, convert the benchmark value to the selected currency
+  const benchmarkRevValue = currency === 'USD' 
+    ? industryBenchmarks.revPerRecipient 
+    : industryBenchmarks.revPerRecipient * exchangeRates[currency];
   
   return [
     {
@@ -56,12 +62,12 @@ export function calculateComparison(
     {
       metric: 'revPerRecipient',
       userValue: userMetrics.revPerRecipient,
-      benchmarkValue: industryBenchmarks.revPerRecipient,
+      benchmarkValue: benchmarkRevValue,
       percentageDifference: calculatePercentageDifference(
         userMetrics.revPerRecipient,
-        industryBenchmarks.revPerRecipient
+        benchmarkRevValue
       ),
-      isAboveBenchmark: userMetrics.revPerRecipient > industryBenchmarks.revPerRecipient
+      isAboveBenchmark: userMetrics.revPerRecipient > benchmarkRevValue
     }
   ];
 }
@@ -88,10 +94,15 @@ export function getMetricDisplayName(metric: keyof BenchmarkMetrics): string {
 
 export function formatMetricValue(
   metric: keyof BenchmarkMetrics,
-  value: number
+  value: number,
+  currency: Currency = 'USD'
 ): string {
   if (metric === 'revPerRecipient') {
-    return `$${value.toFixed(2)}`;
+    const currencySymbol = currency === 'USD' ? '$' : 
+                          currency === 'EUR' ? '€' : 
+                          currency === 'GBP' ? '£' : 
+                          currency === 'AUD' ? 'A$' : 'C$';
+    return `${currencySymbol}${value.toFixed(2)}`;
   }
   
   // Convert decimal to percentage with 2 decimal places
