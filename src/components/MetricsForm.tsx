@@ -25,6 +25,12 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
   const [metrics, setMetrics] = useState<UserMetrics>(initialMetrics);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currency, setCurrency] = useState<Currency>('USD');
+  const [inputValues, setInputValues] = useState({
+    openRate: '0.00',
+    clickRate: '0.00',
+    placedOrderRate: '0.00',
+    revPerRecipient: '0.00'
+  });
 
   // Validate inputs as user types
   const validateInput = (name: keyof UserMetrics, value: number): string => {
@@ -46,6 +52,12 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
       
     setMetrics(prev => ({ ...prev, [name]: numValue }));
     
+    // Update the input display value
+    setInputValues(prev => ({
+      ...prev,
+      [name]: name === 'revPerRecipient' ? value[0].toFixed(2) : value[0].toFixed(2)
+    }));
+    
     const error = validateInput(name, value[0]);
     setErrors(prev => ({ ...prev, [name]: error }));
   };
@@ -54,26 +66,50 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
-    let numValue: number;
-    let displayValue: number;
+    // Update the input display value directly
+    setInputValues(prev => ({ ...prev, [name]: value }));
     
-    if (name === 'revPerRecipient') {
-      // Direct dollar value input
-      numValue = parseFloat(value);
-      displayValue = numValue;
-    } else {
-      // Convert percentage input to decimal for internal storage
-      displayValue = parseFloat(value);
-      numValue = displayValue / 100;
+    const numValue = parseFloat(value);
+    
+    // Only update the metrics state if it's a valid number
+    if (!isNaN(numValue)) {
+      let metricValue: number;
+      
+      if (name === 'revPerRecipient') {
+        metricValue = numValue; // Direct value for revenue
+      } else {
+        metricValue = numValue / 100; // Convert percentage to decimal
+      }
+      
+      setMetrics(prev => ({ ...prev, [name]: metricValue }));
+      
+      const error = validateInput(name as keyof UserMetrics, numValue);
+      setErrors(prev => ({ ...prev, [name]: error }));
     }
-    
-    const error = validateInput(name as keyof UserMetrics, displayValue);
+  };
+
+  // Handle input blur to format the value correctly
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const numValue = parseFloat(value);
     
     if (!isNaN(numValue)) {
-      setMetrics(prev => ({ ...prev, [name]: numValue }));
+      setInputValues(prev => ({
+        ...prev,
+        [name]: numValue.toFixed(2)
+      }));
+    } else {
+      // Reset to 0 if invalid input
+      setInputValues(prev => ({
+        ...prev,
+        [name]: '0.00'
+      }));
+      
+      setMetrics(prev => ({ 
+        ...prev, 
+        [name]: name === 'revPerRecipient' ? 0 : 0 
+      }));
     }
-    
-    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   // Handle currency change
@@ -85,6 +121,11 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
     setMetrics(prev => ({ 
       ...prev, 
       revPerRecipient: valueInNewCurrency 
+    }));
+    
+    setInputValues(prev => ({
+      ...prev,
+      revPerRecipient: valueInNewCurrency.toFixed(2)
     }));
     
     setCurrency(newCurrency);
@@ -108,12 +149,12 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
     onSubmit(metricsToSubmit);
   };
 
-  // Get display values for inputs and sliders
-  const getDisplayValue = (metric: keyof UserMetrics): number => {
+  // Get display values for sliders
+  const getSliderValue = (metric: keyof UserMetrics): number[] => {
     if (metric === 'revPerRecipient') {
-      return metrics[metric];
+      return [metrics[metric]];
     }
-    return metrics[metric] * 100; // Convert decimal to percentage
+    return [metrics[metric] * 100]; // Convert decimal to percentage
   };
 
   return (
@@ -123,7 +164,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
           {/* Open Rate */}
           <div className="space-y-4">
             <Label htmlFor="openRate" className="text-sm font-medium">
-              Open Rate: {getDisplayValue('openRate').toFixed(2)}%
+              Open Rate: {(metrics.openRate * 100).toFixed(2)}%
             </Label>
             <div className="flex gap-4 items-center">
               <div className="flex-1">
@@ -133,7 +174,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={[getDisplayValue('openRate')]}
+                  value={getSliderValue('openRate')}
                   onValueChange={(value) => handleSliderChange('openRate', value)}
                 />
               </div>
@@ -145,8 +186,9 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={getDisplayValue('openRate').toFixed(2)}
+                  value={inputValues.openRate}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={errors.openRate ? "border-destructive pr-8" : "pr-8"}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -162,7 +204,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
           {/* Click Rate */}
           <div className="space-y-4">
             <Label htmlFor="clickRate" className="text-sm font-medium">
-              Click Rate: {getDisplayValue('clickRate').toFixed(2)}%
+              Click Rate: {(metrics.clickRate * 100).toFixed(2)}%
             </Label>
             <div className="flex gap-4 items-center">
               <div className="flex-1">
@@ -172,7 +214,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={[getDisplayValue('clickRate')]}
+                  value={getSliderValue('clickRate')}
                   onValueChange={(value) => handleSliderChange('clickRate', value)}
                 />
               </div>
@@ -184,8 +226,9 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={getDisplayValue('clickRate').toFixed(2)}
+                  value={inputValues.clickRate}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={errors.clickRate ? "border-destructive pr-8" : "pr-8"}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -201,7 +244,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
           {/* Placed Order Rate */}
           <div className="space-y-4">
             <Label htmlFor="placedOrderRate" className="text-sm font-medium">
-              Placed Order Rate: {getDisplayValue('placedOrderRate').toFixed(2)}%
+              Placed Order Rate: {(metrics.placedOrderRate * 100).toFixed(2)}%
             </Label>
             <div className="flex gap-4 items-center">
               <div className="flex-1">
@@ -211,7 +254,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={[getDisplayValue('placedOrderRate')]}
+                  value={getSliderValue('placedOrderRate')}
                   onValueChange={(value) => handleSliderChange('placedOrderRate', value)}
                 />
               </div>
@@ -223,8 +266,9 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={getDisplayValue('placedOrderRate').toFixed(2)}
+                  value={inputValues.placedOrderRate}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={errors.placedOrderRate ? "border-destructive pr-8" : "pr-8"}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -266,7 +310,7 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={[metrics.revPerRecipient]}
+                  value={getSliderValue('revPerRecipient')}
                   onValueChange={(value) => handleSliderChange('revPerRecipient', value)}
                 />
               </div>
@@ -278,8 +322,9 @@ const MetricsForm: React.FC<MetricsFormProps> = ({ onSubmit, isSubmitEnabled }) 
                   min={0}
                   max={100}
                   step={0.01}
-                  value={metrics.revPerRecipient.toFixed(2)}
+                  value={inputValues.revPerRecipient}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   className={errors.revPerRecipient ? "border-destructive pl-8" : "pl-8"}
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
